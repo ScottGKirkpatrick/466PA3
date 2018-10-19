@@ -11,7 +11,7 @@ import threading
 class Interface:
     ## @param maxsize - the maximum size of the queue storing packets
     def __init__(self, maxsize=0):
-        self.queue = queue.Queue(maxsize);
+        self.queue = queue.Queue(maxsize)
         self.mtu = None
     
     ##get packet from the queue interface
@@ -81,9 +81,14 @@ class Host:
     # @param dst_addr: destination address for the packet
     # @param data_S: data being transmitted to the network layer
     def udt_send(self, dst_addr, data_S):
-        p = NetworkPacket(dst_addr, data_S)
-        self.out_intf_L[0].put(p.to_byte_S()) #send packets always enqueued successfully
-        print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
+        p_L = []
+        maxDataLen = self.out_intf_L[0].mtu - NetworkPacket.dst_addr_S_length
+        while len(data_S):
+            p_L += [NetworkPacket(dst_addr, data_S[:maxDataLen])]
+            data_S = data_S[maxDataLen:]
+        for p in p_L:
+            self.out_intf_L[0].put(p.to_byte_S()) #send packets always enqueued successfully
+            print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
         
     ## receive packet from the network layer
     def udt_receive(self):
