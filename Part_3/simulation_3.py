@@ -3,43 +3,54 @@ Created on Oct 12, 2016
 
 @author: mwittie
 '''
-import network
+import network_3
 import link
 import threading
 from time import sleep
 
 # configuration parameters
 router_queue_size = 0  # 0 means unlimited
-# give the network sufficient time to transfer all packets before quitting
+# give the network_3 sufficient time to transfer all packets before quitting
 simulation_time = 10
 
 if __name__ == '__main__':
     object_L = []  # keeps track of objects, so we can kill their threads
 
-    # create network nodes
-    client_1 = network.Host(1)
+    # create network_3 nodes
+    client_1 = network_3.Host(1)
     object_L.append(client_1)
-    client_2 = network.Host(2)
+    client_2 = network_3.Host(2)
     object_L.append(client_2)
 
-    server_1 = network.Host(3)
+    server_1 = network_3.Host(3)
     object_L.append(server_1)
-    server_2 = network.Host(4)
+    server_2 = network_3.Host(4)
     object_L.append(server_2)
 
-    router_a = network.Router(name='A', intf_count=4,
-                              max_queue_size=router_queue_size)
+    table_a = [(0, 2),(1,3)]
+
+    router_a = network_3.Router(name='A', intf_count=4,
+                              max_queue_size=router_queue_size, forward_t = table_a)
     object_L.append(router_a)
-    router_b = network.Router(name='B', intf_count=2,
-                              max_queue_size=router_queue_size)
+    
+    table_b = [(0, 1)]
+
+    router_b = network_3.Router(name='B', intf_count=2,
+                              max_queue_size=router_queue_size,  forward_t =  table_b)
     object_L.append(router_b)
-    router_c = network.Router(name='C', intf_count=2,
-                              max_queue_size=router_queue_size)
+    
+    table_c = [(0, 1)]
+
+    router_c = network_3.Router(name='C', intf_count=2,
+                              max_queue_size=router_queue_size, forward_t =  table_c)
     object_L.append(router_c)
-    router_d = network.Router(name='D', intf_count=4,
-                              max_queue_size=router_queue_size)
+    
+    table_d = [(0, 2), (1, 3)]
+
+    router_d = network_3.Router(name='D', intf_count=4,
+                              max_queue_size=router_queue_size,   forward_t = table_d)
     object_L.append(router_d)
-    # create a Link Layer to keep track of links between network nodes
+    # create a Link Layer to keep track of links between network_3 nodes
     link_layer = link.LinkLayer()
     object_L.append(link_layer)
 
@@ -50,19 +61,20 @@ if __name__ == '__main__':
     # connect client 2 to router a
     link_layer.add_link(link.Link(client_2, 0, router_a, 1, 50))
 
+    #Upper port values are OUTPUT ports else input
     link_layer.add_link(
         link.Link(router_a, 2, router_b, 0, 50))  # connect a to b
     link_layer.add_link(
-        link.Link(router_b, 1, router_d, 2, 50))  # connect b to d
+        link.Link(router_b, 1, router_d, 0, 50))  # connect b to d
     link_layer.add_link(
         link.Link(router_a, 3, router_c, 0, 50))  # connect a to c
     link_layer.add_link(
-        link.Link(router_c, 1, router_d, 3, 50))  # connect c to d
+        link.Link(router_c, 1, router_d, 1, 50))  # connect c to d
 
     # connect server 1 to router d
-    link_layer.add_link(link.Link(server_1, 0, router_d, 0, 50))
+    link_layer.add_link(link.Link( router_d, 2, server_1, 0, 50))
     # connect server 2 to router d
-    link_layer.add_link(link.Link(server_2, 0, router_d, 1, 50))
+    link_layer.add_link(link.Link( router_d, 3, server_2, 0, 50))
 
     # start all the objects
     thread_L = []
@@ -85,16 +97,16 @@ if __name__ == '__main__':
     thread_L.append(threading.Thread(
         name=router_d.__str__(), target=router_d.run))
 
-    thread_L.append(threading.Thread(name="Network", target=link_layer.run))
+    thread_L.append(threading.Thread(name="network_3", target=link_layer.run))
 
     for t in thread_L:
         t.start()
 
     # create some send events
     for i in range(3):
-        client_1.udt_send(2, 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')
+        client_1.udt_send(3, 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')
 
-    # give the network sufficient time to transfer all packets before quitting
+    # give the network_3 sufficient time to transfer all packets before quitting
     sleep(simulation_time)
 
     # join all threads
