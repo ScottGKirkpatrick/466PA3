@@ -27,25 +27,25 @@ if __name__ == '__main__':
     server_2 = network_3.Host(4)
     object_L.append(server_2)
 
-    table_a = [(0, 2),(1,3)]
+    table_a = [(2, 3), (3, 4)] #first tuple entry is output port, second address to forward to
 
     router_a = network_3.Router(name='A', intf_count=4,
                               max_queue_size=router_queue_size, forward_t = table_a)
     object_L.append(router_a)
     
-    table_b = [(0, 1)]
+    table_b = [(1,3)]
 
     router_b = network_3.Router(name='B', intf_count=2,
-                              max_queue_size=router_queue_size,  forward_t =  table_b)
+                              max_queue_size=router_queue_size,  forward_t = table_b)
     object_L.append(router_b)
     
-    table_c = [(0, 1)]
+    table_c = [( 1, 4)]
 
     router_c = network_3.Router(name='C', intf_count=2,
                               max_queue_size=router_queue_size, forward_t =  table_c)
     object_L.append(router_c)
     
-    table_d = [(0, 2), (1, 3)]
+    table_d = [(2, 3), (3, 4)]
 
     router_d = network_3.Router(name='D', intf_count=4,
                               max_queue_size=router_queue_size,   forward_t = table_d)
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     # create some send events
     for i in range(3):
-        client_1.udt_send(3, 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')
+        client_2.udt_send(4, 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')
 
     # give the network_3 sufficient time to transfer all packets before quitting
     sleep(simulation_time)
