@@ -20,7 +20,7 @@ if __name__ == '__main__':
     client_1 = network.Host(1)
     object_L.append(client_1)
     client_2 = network.Host(2)
-    object_L.append(client_1)
+    object_L.append(client_2)
 
     server_1 = network.Host(3)
     object_L.append(server_1)
