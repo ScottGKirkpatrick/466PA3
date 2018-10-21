@@ -10,9 +10,9 @@ import threading
 ## wrapper class for a queue of packets
 class Interface:
     ## @param maxsize - the maximum size of the queue storing packets
-    def __init__(self, maxsize=0):
+    def __init__(self, mtu = 50, maxsize=0):
         self.queue = queue.Queue(maxsize)
-        self.mtu = None
+        self.mtu = mtu
     
     ##get packet from the queue interface
     def get(self):
