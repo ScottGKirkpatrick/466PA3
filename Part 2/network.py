@@ -35,12 +35,17 @@ class Interface:
 class NetworkPacket:
     ## packet encoding lengths 
     dst_addr_S_length = 5
+    flags_S_length = 1
+    frag_offset_S_length = 4
+    total_header_S_length = dst_addr_S_length + flags_S_length + frag_offset_S_length
     
     ##@param dst_addr: address of the destination host
     # @param data_S: packet payload
-    def __init__(self, dst_addr, data_S):
+    def __init__(self, dst_addr, data_S, frag_flag = 0, frag_offset = 0):
         self.dst_addr = dst_addr
         self.data_S = data_S
+        self.frag_flag = frag_flag
+        self.frag_offset = frag_offset
         
     ## called when printing the object
     def __str__(self):
@@ -48,7 +53,9 @@ class NetworkPacket:
         
     ## convert packet to a byte string for transmission over links
     def to_byte_S(self):
-        byte_S = str(self.dst_addr).zfill(self.dst_addr_S_length)
+        byte_S = str(self.frag_flag)
+        byte_S += str(self.frag_offset).zfill(self.frag_offset_S_length)
+        byte_S += str(self.dst_addr).zfill(self.dst_addr_S_length)
         byte_S += self.data_S
         return byte_S
     
@@ -56,9 +63,12 @@ class NetworkPacket:
     # @param byte_S: byte string representation of the packet
     @classmethod
     def from_byte_S(self, byte_S):
-        dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
-        data_S = byte_S[NetworkPacket.dst_addr_S_length : ]
-        return self(dst_addr, data_S)
+        p = NetworkPacket(None,None)
+        p.frag_flag = int(byte_S[0])
+        p.frag_offset = int(byte_S[self.flags_S_length : self.flags_S_length+self.frag_offset_S_length])
+        p.dst_addr = int(byte_S[self.flags_S_length+self.frag_offset_S_length : self.flags_S_length+self.frag_offset_S_length+self.dst_addr_S_length])
+        p.data_S = byte_S[self.total_header_S_length : ]
+        return p
     
 
     
@@ -82,7 +92,7 @@ class Host:
     # @param data_S: data being transmitted to the network layer
     def udt_send(self, dst_addr, data_S):
         p_L = []
-        maxDataLen = self.out_intf_L[0].mtu - NetworkPacket.dst_addr_S_length
+        maxDataLen = self.out_intf_L[0].mtu - NetworkPacket.total_header_S_length
         while len(data_S):
             p_L += [NetworkPacket(dst_addr, data_S[:maxDataLen])]
             data_S = data_S[maxDataLen:]
@@ -94,7 +104,22 @@ class Host:
     def udt_receive(self):
         pkt_S = self.in_intf_L[0].get()
         if pkt_S is not None:
-            print('%s: received packet "%s" on the in interface' % (self, pkt_S))
+            #print('%s: received first frag "%s" on the in interface' % (self, pkt_S))
+            pkt = NetworkPacket.from_byte_S(pkt_S)
+            frags = []
+            while pkt.frag_flag:
+                frag_S = self.in_intf_L[0].get()
+                if frag_S is not None:
+                    #print('%s: received frag "%s" on the in interface' % (self, frag_S))
+                    frags += [NetworkPacket.from_byte_S(frag_S)]
+                elif not len(frags):
+                    continue 
+                frags = frags[-1:]+frags[:-1]
+                if frags[0].frag_offset is len(pkt.data_S):
+                    pkt.data_S += frags[0].data_S
+                    pkt.frag_flag = frags[0].frag_flag
+                    del frags[0]
+            print('%s: received packet "%s" on the in interface' % (self, pkt.data_S))
        
     ## thread target for the host to keep receiving data
     def run(self):
@@ -140,9 +165,20 @@ class Router:
                     # HERE you will need to implement a lookup into the 
                     # forwarding table to find the appropriate outgoing interface
                     # for now we assume the outgoing interface is also i
-                    self.out_intf_L[i].put(p.to_byte_S(), True)
-                    print('%s: forwarding packet "%s" from interface %d to %d with mtu %d' \
-                        % (self, p, i, i, self.out_intf_L[i].mtu))
+                    p_L = []
+                    maxDataLen = self.out_intf_L[0].mtu - NetworkPacket.total_header_S_length
+                    offset = 0
+                    while len(p.data_S) > maxDataLen:  
+                        frag = NetworkPacket(p.dst_addr,p.data_S[:maxDataLen],1,offset)  
+                        offset += len(frag.data_S)                   
+                        p.data_S = p.data_S[maxDataLen:]
+                        p_L += [frag]
+                    p.frag_offset = offset
+                    p_L += [p]
+                    for p in p_L:
+                        self.out_intf_L[i].put(p.to_byte_S(), True)
+                        print('%s: forwarding packet "%s" from interface %d to %d with mtu %d' \
+                            % (self, p, i, i, self.out_intf_L[i].mtu))
             except queue.Full:
                 print('%s: packet "%s" lost on interface %d' % (self, p, i))
                 pass
